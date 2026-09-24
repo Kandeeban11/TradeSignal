@@ -151,6 +151,9 @@ tr:last-child td{border-bottom:none;}
 .suggestion-table .score.short{color:var(--bear);}
 .suggestion-table .score.neutral{color:var(--warn);}
 .suggestion-empty{color:var(--muted);font-size:12.5px;padding:14px 0;}
+[data-theme="dark"]{--bg:#0a0e13;--panel:#11161d;--panel-alt:#0d1218;--border:#232b36;--text:#e7ecf1;--muted:#8996a3;--muted-dim:#5c6773;--bull:#31d0aa;--bull-dim:#1c3b34;--bear:#ef5b5b;--bear-dim:#3c2226;--warn:#f2b84b;--accent:#5aa9e6;--white:#11161d;--deep:#08131c;}
+.theme-btn,.logout-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 9px;border-radius:var(--radius);font-size:11px;white-space:nowrap;}
+.theme-btn:hover,.logout-btn:hover{color:var(--text);border-color:var(--accent);}
 
 /* TradeSignal workspace theme */
 :root{
@@ -225,6 +228,8 @@ td{color:var(--text);}
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
       <a href="index.html" style="color:var(--accent);font-size:12px;text-decoration:none;font-family:'IBM Plex Mono',monospace;">&lt;- Admin workspace</a>
+      <button class="theme-btn" id="themeBtn" type="button">Dark mode</button>
+      <button class="logout-btn" id="logoutBtn" type="button">Log out</button>
       <div class="clock mono" id="clock"></div>
     </div>
   </div>
@@ -1295,6 +1300,9 @@ window.addEventListener('resize', ()=>{
 });
 
 async function init(){
+  applyTheme();
+  document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+  document.getElementById('logoutBtn').addEventListener('click', logoutUser);
   initSymbolSelect();
   initTabs();
   initClock();
@@ -1309,6 +1317,22 @@ async function init(){
   paperState = await loadPaperState();
   renderPaper();
   analyze();
+}
+function applyTheme(){
+  const theme=localStorage.getItem('tradesignal-theme') || 'light';
+  document.documentElement.dataset.theme=theme;
+  const button=document.getElementById('themeBtn');
+  if(button) button.textContent=theme==='dark'?'Light mode':'Dark mode';
+}
+function toggleTheme(){
+  const next=document.documentElement.dataset.theme==='dark'?'light':'dark';
+  localStorage.setItem('tradesignal-theme',next);
+  applyTheme();
+}
+async function logoutUser(){
+  const remote=getPaperClient();
+  if(remote) await remote.auth.signOut();
+  location.href='index.html';
 }
 init();
 </script>

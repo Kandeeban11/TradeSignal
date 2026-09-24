@@ -10,12 +10,43 @@
     if (root) root.innerHTML = `<div class="notice ${error ? 'error' : ''}">${message}</div>`;
   }
 
+  function applyTheme() {
+    const theme = localStorage.getItem('tradesignal-theme') || 'light';
+    document.documentElement.dataset.theme = theme;
+    const button = document.getElementById('adminThemeToggle');
+    if (button) button.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
+  }
+
+  function installThemeToggle() {
+    if (document.getElementById('adminThemeToggle')) return;
+    const button = document.createElement('button');
+    button.id = 'adminThemeToggle';
+    button.className = 'theme-toggle';
+    button.type = 'button';
+    button.style.cssText = 'position:fixed;right:20px;top:20px;z-index:10';
+    button.onclick = () => {
+      localStorage.setItem('tradesignal-theme', document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+      applyTheme();
+    };
+    document.body.appendChild(button);
+    applyTheme();
+  }
+
+  function installAdminSignOut() {
+    const button = document.getElementById('signout');
+    if (button) button.onclick = async () => {
+      await client.auth.signOut();
+      authScreen();
+    };
+  }
+
   function setupScreen() {
     document.body.innerHTML = `<div class="auth-screen"><aside class="auth-aside"><div class="logo">trade<span>signal</span></div><div class="aside-copy"><h1>Connect your workspace.</h1><p>Supabase is ready to power authentication, accounts, trades, and analytics. Add your project URL and anon key to start.</p></div><div class="aside-foot">DEPLOYMENT SETUP REQUIRED</div></aside><main class="auth-card"><div class="auth-inner"><div class="eyebrow">Supabase connection</div><h2>Almost ready</h2><p class="muted">Set the public project values in <b>supabase-config.js</b>, then reload this page.</p><div class="notice error">The demo database has been removed. No sample users or trades are loaded.</div></div></main></div>`;
   }
 
   function authScreen() {
     window.auth();
+    installThemeToggle();
     const hint = document.querySelector('.auth-actions .small');
     if (hint) hint.textContent = 'Email verification is handled by Supabase';
     const form = document.getElementById('loginForm');
@@ -113,6 +144,8 @@
       }, []).map((month) => ({ month: month.month, value: month.value })));
     }
     window.renderApp();
+    installAdminSignOut();
+    installThemeToggle();
   }
 
   window.modal = function (user) {
