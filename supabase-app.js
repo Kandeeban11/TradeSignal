@@ -76,6 +76,11 @@
       notice('This account is not an active administrator.', true);
       return;
     }
+    currentAdmin = { name: profileResult.data.full_name, email: profileResult.data.email || session.user.email || '' };
+    pageHeader = function (title, sub) {
+      const displayName = currentAdmin.name || currentAdmin.email || 'Administrator';
+      return `<div class="topbar"><div><h1>${title}</h1><p class="muted">${sub}</p></div><div class="profile"><div class="avatar">${initials(displayName)}</div><div><strong>${displayName}</strong><span>${currentAdmin.email}</span></div></div></div>`;
+    };
     const [profilesResult, tradesResult, monthlyResult] = await Promise.all([
       client.from('profiles').select('*').eq('role', 'trader').order('created_at', { ascending: false }),
       client.from('trades').select('*, profiles(full_name, email)').order('closed_at', { ascending: false }),
@@ -125,7 +130,10 @@
         else { close(); await loadWorkspace(); }
       } else {
         const { error } = await client.functions.invoke('create-user', { body: { full_name: name, email, status } });
-        if (error) document.getElementById('modalNotice').textContent = 'Invite service unavailable. Deploy the create-user Edge Function first.';
+        if (error) {
+          const details = error.message || 'Unknown Supabase function error';
+          document.getElementById('modalNotice').textContent = `Could not send invite: ${details}. Deploy create-user and configure its service-role secret.`;
+        }
         else { close(); await loadWorkspace(); }
       }
       submit.disabled = false;
