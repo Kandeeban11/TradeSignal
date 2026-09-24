@@ -3,6 +3,7 @@
   const config = window.TRADESIGNAL_SUPABASE || {};
   const configured = config.url && config.anonKey && !config.url.includes('YOUR_PROJECT') && !config.anonKey.includes('YOUR_');
   let client;
+  let recoveryMode = false;
 
   function notice(message, error) {
     const root = document.getElementById('authNotice');
@@ -50,6 +51,7 @@
   }
 
   function showPasswordRecovery() {
+    recoveryMode = true;
     document.body.innerHTML = `<div class="auth-screen"><aside class="auth-aside"><div class="logo">trade<span>signal</span></div><div class="aside-copy"><h1>Set a new password.</h1><p>Your recovery link has been verified. Choose a new password for your TradeSignal administrator account.</p></div><div class="aside-foot">SECURE ACCOUNT RECOVERY</div></aside><main class="auth-card"><div class="auth-inner"><div class="eyebrow">Verified recovery link</div><h2>New password</h2><p class="muted">Use at least 8 characters, then sign in again.</p><form class="form" id="newPasswordForm"><div class="field"><label>New password</label><input id="newPassword" type="password" minlength="8" required></div><div class="field"><label>Confirm password</label><input id="confirmPassword" type="password" minlength="8" required></div><button class="primary" style="width:100%">Update password</button></form><div id="authNotice"></div></div></main></div>`;
     document.getElementById('newPasswordForm').onsubmit = async (event) => {
       event.preventDefault();
@@ -59,7 +61,7 @@
       const { error } = await client.auth.updateUser({ password });
       if (error) return notice(error.message, true);
       notice('Password updated. You can now sign in.');
-      setTimeout(() => { history.replaceState({}, document.title, location.pathname); authScreen(); }, 900);
+      setTimeout(() => { history.replaceState({}, document.title, location.pathname); recoveryMode = false; authScreen(); }, 900);
     };
   }
 
@@ -150,8 +152,18 @@
     if (!configured || !window.supabase) return setupScreen();
     client = window.supabase.createClient(config.url, config.anonKey);
     client.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') showPasswordRecovery();
+      if (event === 'PASSWORD_RECOVERY' && !recoveryMode) showPasswordRecovery();
     });
+    const params = new URLSearchParams(location.search);
+    if (params.get('code')) {
+      const { error } = await client.auth.exchangeCodeForSession(params.get('code'));
+      if (error) {
+        authScreen();
+        notice(`Recovery link could not be verified: ${error.message}`, true);
+        return;
+      }
+      return showPasswordRecovery();
+    }
     if (location.hash.includes('type=recovery')) return showPasswordRecovery();
     const { data } = await client.auth.getSession();
     if (data.session) return loadWorkspace();
