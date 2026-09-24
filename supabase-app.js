@@ -131,7 +131,15 @@
       } else {
         const { error } = await client.functions.invoke('create-user', { body: { full_name: name, email, status } });
         if (error) {
-          const details = error.message || 'Unknown Supabase function error';
+          let details = error.message || 'Unknown Supabase function error';
+          if (error.context) {
+            try {
+              const response = await error.context.clone().json();
+              if (response?.error) details = response.error;
+            } catch (_) {
+              // Keep the SDK message when the response is not JSON.
+            }
+          }
           document.getElementById('modalNotice').textContent = `Could not send invite: ${details}. Deploy create-user and configure its service-role secret.`;
         }
         else { close(); await loadWorkspace(); }
