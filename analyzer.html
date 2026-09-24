@@ -229,6 +229,7 @@ td{color:var(--text);}
       <span class="tag">crypto trade analyzer - live data | signal engine | backtest | paper trading</span>
     </div>
     <div style="display:flex;align-items:center;gap:14px;">
+      <a href="index.html" id="adminWorkspaceLink" style="display:none;color:var(--accent);font-size:12px;text-decoration:none;font-family:'IBM Plex Mono',monospace;">&lt;- Admin workspace</a>
       <button class="theme-btn" id="themeBtn" type="button">Dark mode</button>
       <button class="logout-btn" id="logoutBtn" type="button">Log out</button>
       <div class="clock mono" id="clock"></div>
@@ -1302,6 +1303,7 @@ window.addEventListener('resize', ()=>{
 
 async function init(){
   applyTheme();
+  await configureWorkspaceLink();
   document.getElementById('themeBtn').addEventListener('click', toggleTheme);
   document.getElementById('logoutBtn').addEventListener('click', logoutUser);
   initSymbolSelect();
@@ -1318,6 +1320,14 @@ async function init(){
   paperState = await loadPaperState();
   renderPaper();
   analyze();
+}
+async function configureWorkspaceLink(){
+  const remote=getPaperClient();
+  if(!remote) return;
+  const {data:{session}}=await remote.auth.getSession();
+  if(!session) return;
+  const {data:profile}=await remote.from('profiles').select('role,status').eq('id',session.user.id).maybeSingle();
+  if(profile?.role==='admin' && profile.status==='active') document.getElementById('adminWorkspaceLink').style.display='inline';
 }
 function applyTheme(){
   const theme=localStorage.getItem('tradesignal-theme') || 'light';
