@@ -25,6 +25,7 @@ Deno.serve(async (request) => {
     if (profileError) throw profileError;
     return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, 'Content-Type': 'application/json' } });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unexpected error' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
+    const message = error instanceof Error ? error.message : (error && typeof error === 'object' && 'message' in error ? String(error.message) : String(error));
+    return new Response(JSON.stringify({ error: message || 'Unexpected error' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
   }
 });
