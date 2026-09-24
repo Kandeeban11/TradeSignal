@@ -70,10 +70,14 @@
     const session = sessionData.session;
     if (!session) return authScreen();
     const profileResult = await client.from('profiles').select('*').eq('id', session.user.id).single();
+    if (!profileResult.error && profileResult.data.role === 'trader' && profileResult.data.status === 'active') {
+      location.href = 'analyzer.html';
+      return;
+    }
     if (profileResult.error || profileResult.data.role !== 'admin' || profileResult.data.status !== 'active') {
       await client.auth.signOut();
       authScreen();
-      notice('This account is not an active administrator.', true);
+      notice(profileResult.data?.status === 'disabled' ? 'This account is disabled.' : 'This account does not have administrator access.', true);
       return;
     }
     currentAdmin = { name: profileResult.data.full_name, email: profileResult.data.email || session.user.email || '' };
