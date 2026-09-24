@@ -114,7 +114,10 @@
     currentAdmin = { name: profileResult.data.full_name, email: profileResult.data.email || session.user.email || '' };
     pageHeader = function (title, sub) {
       const displayName = currentAdmin.name || currentAdmin.email || 'Administrator';
-      return `<div class="topbar"><div><h1>${title}</h1><p class="muted">${sub}</p></div><div class="profile"><div class="avatar">${initials(displayName)}</div><div><strong>${displayName}</strong><span>${currentAdmin.email}</span></div></div></div>`;
+      const hour = new Date().getHours();
+      const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+      const heading = title === 'Good morning, Avery' ? `${greeting}, ${displayName}` : title;
+      return `<div class="topbar"><div><h1>${heading}</h1><p class="muted">${sub}</p></div><div class="profile"><div class="avatar">${initials(displayName)}</div><div><strong>${displayName}</strong><span>${currentAdmin.email}</span></div></div></div>`;
     };
     const [profilesResult, tradesResult, monthlyResult] = await Promise.all([
       client.from('profiles').select('*').eq('role', 'trader').order('created_at', { ascending: false }),
