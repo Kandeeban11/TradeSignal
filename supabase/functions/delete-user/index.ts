@@ -17,13 +17,12 @@ Deno.serve(async (request) => {
     const { data: admin } = await adminClient.from('profiles').select('id').eq('id', caller.id).eq('role', 'admin').eq('status', 'active').single();
     if (!admin) return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-    const { email, full_name, status = 'active' } = await request.json();
-    if (!email || !full_name) return new Response(JSON.stringify({ error: 'Email and full name are required' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
-    const redirectTo = request.headers.get('Origin') ?? Deno.env.get('APP_URL');
-    const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, redirectTo ? { redirectTo } : undefined);
-    if (inviteError || !invited.user) throw inviteError ?? new Error('Invite failed');
-    const { error: profileError } = await adminClient.from('profiles').insert({ id: invited.user.id, email, full_name, role: 'trader', status });
-    if (profileError) throw profileError;
+    const { user_id: userId } = await request.json();
+    if (!userId) return new Response(JSON.stringify({ error: 'User id is required' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
+    if (userId === caller.id) return new Response(JSON.stringify({ error: 'You cannot delete your own admin account' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
+
+    const { error } = await adminClient.auth.admin.deleteUser(userId);
+    if (error) throw error;
     return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, 'Content-Type': 'application/json' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : (error && typeof error === 'object' && 'message' in error ? String(error.message) : String(error));

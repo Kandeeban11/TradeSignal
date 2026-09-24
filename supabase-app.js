@@ -52,7 +52,7 @@
 
   function showPasswordRecovery() {
     recoveryMode = true;
-    document.body.innerHTML = `<div class="auth-screen"><aside class="auth-aside"><div class="logo">trade<span>signal</span></div><div class="aside-copy"><h1>Set a new password.</h1><p>Your recovery link has been verified. Choose a new password for your TradeSignal administrator account.</p></div><div class="aside-foot">SECURE ACCOUNT RECOVERY</div></aside><main class="auth-card"><div class="auth-inner"><div class="eyebrow">Verified recovery link</div><h2>New password</h2><p class="muted">Use at least 8 characters, then sign in again.</p><form class="form" id="newPasswordForm"><div class="field"><label>New password</label><input id="newPassword" type="password" minlength="8" required></div><div class="field"><label>Confirm password</label><input id="confirmPassword" type="password" minlength="8" required></div><button class="primary" style="width:100%">Update password</button></form><div id="authNotice"></div></div></main></div>`;
+    document.body.innerHTML = `<div class="auth-screen"><aside class="auth-aside"><div class="logo">trade<span>signal</span></div><div class="aside-copy"><h1>Set a new password.</h1><p>Your account link has been verified. Choose a new password for your TradeSignal account.</p></div><div class="aside-foot">SECURE ACCOUNT SETUP</div></aside><main class="auth-card"><div class="auth-inner"><div class="eyebrow">Verified account link</div><h2>New password</h2><p class="muted">Use at least 8 characters, then sign in again.</p><form class="form" id="newPasswordForm"><div class="field"><label>New password</label><input id="newPassword" type="password" minlength="8" required></div><div class="field"><label>Confirm password</label><input id="confirmPassword" type="password" minlength="8" required></div><button class="primary" style="width:100%">Update password</button></form><div id="authNotice"></div></div></main></div>`;
     document.getElementById('newPasswordForm').onsubmit = async (event) => {
       event.preventDefault();
       const password = document.getElementById('newPassword').value;
@@ -156,8 +156,19 @@
     document.querySelectorAll('[data-delete]').forEach((button) => button.onclick = async () => {
       const user = store.users.find((item) => item.id === button.dataset.delete);
       if (!user || !confirm(`Delete ${user.name}'s profile and trades?`)) return;
-      const { error } = await client.from('profiles').delete().eq('id', user.id);
-      if (error) alert(error.message); else await loadWorkspace();
+      const { error } = await client.functions.invoke('delete-user', { body: { user_id: user.id } });
+      if (error) {
+        let details = error.message || 'Unable to delete user';
+        if (error.context) {
+          try {
+            const response = await error.context.clone().json();
+            if (response?.error) details = response.error;
+          } catch (_) {
+            // Keep the SDK message when the response is not JSON.
+          }
+        }
+        alert(details);
+      } else await loadWorkspace();
     });
     document.getElementById('tradeUser')?.addEventListener('change', (event) => document.querySelectorAll('#tradesTable tbody tr').forEach((row) => { row.style.display = event.target.value === 'All traders' || row.dataset.trader === event.target.value ? '' : 'none'; }));
     document.getElementById('statusFilter')?.addEventListener('change', () => filterUsers());
@@ -181,6 +192,11 @@
       return showPasswordRecovery();
     }
     if (location.hash.includes('type=recovery')) return showPasswordRecovery();
+    if (location.hash.includes('type=invite')) {
+      const { data } = await client.auth.getSession();
+      if (data.session) return showPasswordRecovery();
+      return authScreen();
+    }
     const { data } = await client.auth.getSession();
     if (data.session) return loadWorkspace();
     authScreen();
