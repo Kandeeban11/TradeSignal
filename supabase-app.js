@@ -43,8 +43,23 @@
     document.getElementById('backLogin').onclick = authScreen;
     document.getElementById('resetForm').onsubmit = async (event) => {
       event.preventDefault();
-      const { error } = await client.auth.resetPasswordForEmail(document.getElementById('resetEmail').value.trim(), { redirectTo: `${location.origin}${location.pathname}` });
+      const redirectTo = config.redirectUrl || `${location.origin}${location.pathname}`;
+      const { error } = await client.auth.resetPasswordForEmail(document.getElementById('resetEmail').value.trim(), { redirectTo });
       notice(error ? error.message : 'Reset email sent. Check your inbox.', !!error);
+    };
+  }
+
+  function showPasswordRecovery() {
+    document.body.innerHTML = `<div class="auth-screen"><aside class="auth-aside"><div class="logo">trade<span>signal</span></div><div class="aside-copy"><h1>Set a new password.</h1><p>Your recovery link has been verified. Choose a new password for your TradeSignal administrator account.</p></div><div class="aside-foot">SECURE ACCOUNT RECOVERY</div></aside><main class="auth-card"><div class="auth-inner"><div class="eyebrow">Verified recovery link</div><h2>New password</h2><p class="muted">Use at least 8 characters, then sign in again.</p><form class="form" id="newPasswordForm"><div class="field"><label>New password</label><input id="newPassword" type="password" minlength="8" required></div><div class="field"><label>Confirm password</label><input id="confirmPassword" type="password" minlength="8" required></div><button class="primary" style="width:100%">Update password</button></form><div id="authNotice"></div></div></main></div>`;
+    document.getElementById('newPasswordForm').onsubmit = async (event) => {
+      event.preventDefault();
+      const password = document.getElementById('newPassword').value;
+      const confirm = document.getElementById('confirmPassword').value;
+      if (password !== confirm) return notice('Passwords do not match.', true);
+      const { error } = await client.auth.updateUser({ password });
+      if (error) return notice(error.message, true);
+      notice('Password updated. You can now sign in.');
+      setTimeout(() => { history.replaceState({}, document.title, location.pathname); authScreen(); }, 900);
     };
   }
 
@@ -134,6 +149,10 @@
   window.supabaseBoot = async function () {
     if (!configured || !window.supabase) return setupScreen();
     client = window.supabase.createClient(config.url, config.anonKey);
+    client.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') showPasswordRecovery();
+    });
+    if (location.hash.includes('type=recovery')) return showPasswordRecovery();
     const { data } = await client.auth.getSession();
     if (data.session) return loadWorkspace();
     authScreen();
